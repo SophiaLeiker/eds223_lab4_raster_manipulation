@@ -12,6 +12,11 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Libraries Included
 
 ```{r}
+library(terra)
+library(dplyr)
+library(spData)
+library(spDataLarge)
+library(tmap)
 
 ```
 
@@ -19,11 +24,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Geometry Includes the following components
 
-- Cell size
+- Cell size --> resolution
 
-- Number of rows/columns
+- Number of rows/columns --> extent 
 
-- Cell orgin
+- Cell origin --> position 
 
 - CRS
 
@@ -32,4 +37,159 @@ Attributes contain the following components
 - One value per cell
 
 - Categorical, numerical, logical 
+
+## Subsetting for Raster Data
+
+Packages in R's Spatial Ecosystem: raster (core package for rasters), sf (new and more popular), sp (original package), stars (can handle both vector and rasters), terra (raster manipulation)
+
+## Loading in a raster dataset
+
+```{r}
+raster_filepath <- system.file("raster/srtm.tif", package = "spDataLarge")
+my_rast <- rast(raster_filepath)
+
+#checking what the raster is
+my_rast
+
+#As you can see this is a new class: SpatRaster, with specific dimensions included
+#Dimensions show that there are 457 rows, 465 columns, and nlyr indicates how many layers are included (in this case nlyr = 1)
+#Resolution indicates the units that the raster resolution is in 
+
+```
+
+## Let's quickly polot the raster
+
+- Use can use the `plot` function here or `tmap`
+
+```{r}
+#Using plot
+plot(my_rast)
+```
+
+```{r}
+#Using tmap
+
+tm_shape(my_rast) +
+  tm_raster()
+```
+
+## Creating a raster data from scratch
+
+- Using numerical data 
+
+```{r}
+elev <- rast(nrows = 6, ncols = 6, resolution = 0.5, #setting the columns and rows and resolution
+             xmin = -1.5, xmax = 1.5, ymin = -1.5, ymax = 1.5, #setting the extent/bounding box
+             vals = 1:36) #creating a matrix of 6x6 to create 36 grid cells filled 1-36 with 1 step for each pixel
+#You can define the CRS as well but we are just keeping it at WGS84 for now
+
+#Checking our output raster
+elev
+
+#Plot output raster
+plot(elev)
+```
+
+## Pulling in Landsat Data
+
+```{r}
+#pulling in landsat
+multi_raster_file <- system.file("raster/landsat.tif", package = "spDataLarge")
+
+#turning this into a raster
+multi_rast <- rast(multi_raster_file)
+
+#checking what this raster is
+multi_rast
+
+#names indicate the different landsat bands, there are 4 layers included
+
+#Checking the number of layers included 
+nlyr(multi_rast)
+
+```
+
+### Subsetting a band from Landsat
+
+```{r}
+#pulling out band 3
+multi_rast3 <- subset(multi_rast, 3)
+nlyr(multi_rast3)
+
+#pulling out band 4
+multi_rast4 <- subset(multi_rast, "landsat_4")
+nlyr(multi_rast4)
+
+```
+
+## Plotting full multi-layer raster
+
+```{r}
+plot(multi_rast)
+```
+
+## Character Vectors and assigning locations with soil types
+
+```{r}
+grain_order <- c("clay", "silt", "sand")
+grain_char <- sample(grain_order, 36, replace = TRUE)
+grain_fact <- factor(grain_char, levels = grain_order) #this is just 36 randomly selected silt, sand, clay (not a raster yet)
+
+#Turning it into a raster 
+
+grain <- rast(nrows = 6, ncols = 6, resolution = 0.5, #establishing the rows, columns and resolution
+              xmin = -1.5, xmax = 1.5, ymin = -1.5, ymax = 1.5, #setting the extent/bounding box
+              vals = grain_fact) #give it values from the grain factors we established before
+```
+
+```{r}
+#plot it
+plot(grain)
+```
+
+## Subsetting
+
+```{r}
+elev[1,1] #finding the value in row 1, column 1
+elev[1] #finding the value in cell 1 (only putting in 1 value indicates cell id rather than rows and columns)
+elev[36] #finding the value of cell 36
+```
+
+## Creating multi-layer raster
+
+- Pulling the gain raster with the elevation raster
+
+```{r}
+two_layer <- c(grain, elev)
+two_layer[1]
+```
+
+- Updating one layer and two layers and replacing with new values 
+
+```{r}
+#Updating one layer and replacing with new value 
+elev[1,1] = 0 #updating the raster to manually override and replace the value that was in column 1,1 with 0
+elev[1]
+
+#updating two layers and replacing with new value
+two_layer[1] <- cbind(c(1), c(4))
+two_layer[1]
+```
+
+## Summary Statistics 
+
+- Looking at the summary of elevation
+
+- Frequency of pixel values across the raster 
+
+- Histogram of values across the raster
+
+```{r}
+summary(elev)
+global(elev, sd) 
+
+freq(grain) #this tells us the number of grid cells for each value (count of number of pixels for each value 
+
+hist(elev) #looking at a histogram of the values within the raster dataset 
+```
 
