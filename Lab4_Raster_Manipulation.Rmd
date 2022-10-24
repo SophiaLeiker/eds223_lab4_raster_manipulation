@@ -1,0 +1,35 @@
+---
+title: 'Lab 4: Raster Manipulation'
+author: "Sophia Leiker"
+date: "10/24/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Libraries Included
+
+```{r}
+
+```
+
+## Raster Data
+
+Geometry Includes the following components
+
+- Cell size
+
+- Number of rows/columns
+
+- Cell orgin
+
+- CRS
+
+Attributes contain the following components
+
+- One value per cell
+
+- Categorical, numerical, logical 
+
