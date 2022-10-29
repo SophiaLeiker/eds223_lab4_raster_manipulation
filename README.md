@@ -39,3 +39,16 @@ Packages in R's Spatial Ecosystem: raster (core package for rasters), sf (new an
 - Frequency of pixel values across the raster 
 
 - Histogram of values across the raster
+
+- Spatial Subsetting 
+
+- Map Algebra 
+Local operations, focal operations, zonal operations
+
+- Merging rasters 
+
+- Aggregation and disaggregation 
+
+- Resampling 
+
+

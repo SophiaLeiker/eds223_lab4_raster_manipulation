@@ -266,3 +266,109 @@ This example returns the first 2 cells of the first row of the “elev” raster
 elev[1:2, drop = FALSE]
 ```
 
+## Masking one raster with another 
+
+Another common use of spatial subsetting is when we use one raster with the same extent and resolution to mask the another. In this case, the masking raster needs to be composed of logicals or NAs.
+
+```{r}
+# create raster mask of the same resolution and extent
+rmask <- elev
+
+#randomly replace values with NA and TRUE to use as a mask
+values(rmask) <- sample(c(NA,TRUE), 36, replace = TRUE)
+
+#spatial subsetting 
+elev[rmask, drop = FALSE] # with the [] operator, you can mask one raster with the other, in this case masking elevation with rmask 
+```
+
+```{r}
+#this is where the actual masking is being done
+mask(elev, rmask)
+```
+
+## Map Algebra 
+
+Here we define map algebra as the set of operations that modify or summarize raster cell values with reference to surrounding cells, zones, or statistical functions that apply to every cell.
+
+### Local Operations 
+
+Local operations are computed on each cell individually. We can use ordinary arithemetic or logical statements 
+
+```{r}
+#adding two rasters together
+elev + elev
+
+#squaring a raster
+elev^2
+
+#taking the log
+log(elev)
+
+elev > 5
+```
+
+## Classifying intervals of values into groups
+
+We can also classify intervals of values into groups. For example, we could classify a DEM into low, middle, and high elevation cells
+
+- first we need to construct a reclassification matrix
+
+- the first column corresponds to the lower end of the class
+
+- the second column corresponds to the upper end of the class
+
+- the third column corresponds to the new value for the specified ranges in columns 1 and 2
+
+```{r}
+#This is creating a reclassification matrix
+
+rcl <- matrix(c(0,12,1,12,24,2,24,36,3), ncol = 3, byrow = TRUE)
+#this is saying that there are three columns so the first column is going to have a 0, then 12, then 1, and then it will go to the next row
+
+rcl
+```
+
+```{r}
+#using this maxrix to then reclassify our elevation matrix
+recl <- classify(elev, rcl = rcl)
+recl
+```
+
+For more efficient processing, we can use a set of map algebra functions. 
+
+- **app()** applies a function to each cell of a raster to summarize the values of multiple layers into one layer 
+
+- **tapp()** is an extension of “app()” that allows us to apply on operation on a subset of layers 
+
+- **lapp()** allows us to apply a function to each cell using layers as arguments
+
+We can use the **lapp()** function to compute the Normalized Difference Vegetation Index (NDVI). Let’s calculate NDVI for Zion National Park using multispectral satellite data.
+
+```{r}
+multi_raster_file <- system.file("raster/landsat.tif", package = "spDataLarge")
+multi_rast <- rast(multi_raster_file)
+```
+
+We need to define a function to calculate NDVI
+
+```{r}
+#creating an ndvi function
+ndvi_fun = function(nir,red){
+  (nir-red) / (nir + red)
+}
+```
+
+So now we can use **lapp()** to calculate NDVI in each raster cell. To do so, we just need the NIR and red bands.
+
+```{r}
+#this is using lapp to apply the ndvi function to each cell
+ndvi_rast <- lapp(multi_rast[[c(4,3)]], fun = ndvi_fun)
+
+tm_shape(ndvi_rast)+
+  tm_raster()
+```
+
+
+
+
+
