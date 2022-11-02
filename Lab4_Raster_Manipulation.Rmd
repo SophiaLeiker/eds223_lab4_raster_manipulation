@@ -330,7 +330,7 @@ rcl
 
 ```{r}
 #using this maxrix to then reclassify our elevation matrix
-recl <- classify(elev, rcl = rcl)
+recl <- classify(elev, rcl = rcl) #we named rcl as our reclassification matrix, but if the reclassification matrix was named something else then it would be rcl = "name"
 recl
 ```
 
@@ -352,13 +352,13 @@ multi_rast <- rast(multi_raster_file)
 We need to define a function to calculate NDVI
 
 ```{r}
-#creating an ndvi function
+#creating an ndvi function with individual layers within the image stack as the inputs
 ndvi_fun = function(nir,red){
   (nir-red) / (nir + red)
 }
 ```
 
-So now we can use **lapp()** to calculate NDVI in each raster cell. To do so, we just need the NIR and red bands.
+So now we can use **lapp()** to calculate NDVI in each raster cell. To do so, we just need the NIR and red bands. As a reminder, lapp() applies a function to each cell using layers as arguments
 
 ```{r}
 #this is using lapp to apply the ndvi function to each cell
@@ -368,7 +368,124 @@ tm_shape(ndvi_rast)+
   tm_raster()
 ```
 
+## Focal Operations
+
+Local operations operate on one cell, though from multiple layers. Focal operations take into account a central (focal) cell and its neighbors. The neighborhood (or kernel, moving window, filter) can take any size or shape. A focal operation applies an aggregation function to all cells in the neighborhood and updates the value of the central cell before moving on to the next central cell
+
+We can use the focal() function to perform spatial filtering. We define the size, shape, and weights of the moving window using a matrix. Here we find the minimum.
+
+```{r}
+elev <- rast(system.file("raster/elev.tif", package = "spData"))
+
+#The function being used here is the minimum function
+r_focal <- focal(elev, w = matrix(1, nrow = 3, ncol = 3), fun = min)
+
+plot(elev)
+plot(r_focal)
+```
 
 
+## Zonal Operations
 
+Similar to focal operations, zonal operations apply an aggregation function to multiple cells. However, instead of applying operations to neighbors, zonal operations aggregate based on “zones”. Zones can are defined using a categorical raster and do not necessarily have to be neighbors
+
+For example, we could find the average elevation for different soil grain sizes.
+
+```{r}
+#zones where the statistic "mean" is being applied to elevation by first grouping all the soil types together (group the soil types together first and then take the mean elevation for each of those groups so we have average elevation for each type of soil)
+zonal(elev, grain, fun = "mean")
+```
+
+## Merging Rasters
+
+- In some cases, data for a region will be stored in multiple, contiguous files. To use them as a single raster, we need to merge them.
+
+- In this example, we download elevation data for Austria and Switzerland and merge the two rasters into one.
+
+```{r}
+aut = geodata::elevation_30s(country = "AUT", path = tempdir())
+ch = geodata::elevation_30s(country = "CHE", path = tempdir())
+aut_ch = merge(aut, ch) #merging these two raster datasets together
+```
+
+## Geometric Operations
+
+- When merging or performing map algebra, rasters need to match in their resolution, projection, origin, and/or extent
+
+- In the simplest case, two images differ only in their extent. Let’s start by increasing the extent of a elevation raster.
+
+```{r}
+elev = rast(system.file("raster/elev.tif", package = "spData"))
+elev_2 = extend(elev, c(1, 2)) # add one row and two columns
+
+plot(elev)
+plot(elev_2)
+```
+
+Performing algebraic operations on objects with different extents doesn’t work.
+
+```{r}
+#this doesn't work because the two extents do not match
+#elev + elev_2
+```
+
+We can align the extent of the 2 rasters using the extend() function. Here we extend the elev object to the extent of elev_2 by adding NAs.
+
+```{r}
+elev_4 <- extend(elev, elev_2)
+```
+
+the origin function returns the coordinates of the cell corner closes to the coordinates (0,0). We can also manually change the origin.
+
+```{r}
+#manually changing the orgin 
+origin(elev_4)
+origin(elev_4) <- c(0.25, 0.25)
+origin(elev_4)
+```
+
+## Aggregation and Disaggregation
+
+Faster datasets can also differ in their resolution to match resolutions we can decrease the resolution by aggregating or increase the resolution by disaggregating.
+
+Let’s start by changing the resolution of a DEM by a factor of 5, by taking the mean.
+
+```{r}
+#Aggregating
+
+dem <- rast(system.file("raster/dem.tif", package = "spDataLarge"))
+dem_agg <-  aggregate(dem, fact = 5, fun = mean)
+
+plot(dem)
+plot(dem_agg)
+```
+
+#### Increasing the Resolution
+
+We have some choices when increasing the resolution. Here we try the bilinear method.
+
+```{r}
+#increasing the resolution using method = "bilinear"
+dem_disagg <- disagg(dem_agg, fact = 5, method = "bilinear")
+identical(dem, dem_disagg)
+
+plot(dem_disagg)
+```
+
+## Resampling 
+
+Aggregation/disaggregation work when both rasters have the same origins. What do we do in the case where we have two or more rasters with different origins and resolutions? Resampling computes values for new pixel locations based on custom resolutions and origins.
+
+In most cases, the target raster would be an object you are already working with, but here we define a target raster.
+
+```{r}
+target_rast <- rast(xmin = 794600, xmax = 798200,
+                   ymin = 8931800, ymax = 8935400,
+                   resolution = 150, crs = "EPSG:32717")
+
+dem_resampl <- resample(dem, y = target_rast, method = "bilinear")
+
+plot(dem)
+plot(dem_resampl)
+```
 
