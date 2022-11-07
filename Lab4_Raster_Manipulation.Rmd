@@ -153,22 +153,34 @@ plot(multi_rast)
 ## Character Vectors and assigning locations with soil types
 
 
-
 ```{r}
+#defining the soil grain types
 grain_order <- c("clay", "silt", "sand")
+
+#randomly create a soil layer, doing it 36 times, replace = True because as we select we will need to replace them
 grain_char <- sample(grain_order, 36, replace = TRUE)
+
+#convert to factor, using the factor function. Using grain character string, the levels are the order
 grain_fact <- factor(grain_char, levels = grain_order) #this is just 36 randomly selected silt, sand, clay (not a raster yet)
 
-#Turning it into a raster 
+#Turning it into a raster using the rast function 
+#defining the grid cells,
+#xmin/max is defining where the raster is going to be 
+#the values are going to be definined by vals
+#by default, terra puts the CRS into WGS84
 
 grain <- rast(nrows = 6, ncols = 6, resolution = 0.5, #establishing the rows, columns and resolution
               xmin = -1.5, xmax = 1.5, ymin = -1.5, ymax = 1.5, #setting the extent/bounding box
               vals = grain_fact) #give it values from the grain factors we established before
+
 ```
 
 ```{r}
 #plot it
 plot(grain)
+
+#this is doing stats on each zone, finding the mean elevation for all the pixels categorized as clay, then silt, then sand
+zonal(elev, grain, fun = "mean")
 ```
 
 ## Raster Subsetting
@@ -416,7 +428,10 @@ aut_ch = merge(aut, ch) #merging these two raster datasets together
 
 ```{r}
 elev = rast(system.file("raster/elev.tif", package = "spData"))
+#extended the extent of the raster by 1 row and 2 columns, it places NA's in the columns within the new cells 
 elev_2 = extend(elev, c(1, 2)) # add one row and two columns
+
+#probably not often going to use extend function
 
 plot(elev)
 plot(elev_2)
@@ -432,7 +447,11 @@ Performing algebraic operations on objects with different extents doesn’t work
 We can align the extent of the 2 rasters using the extend() function. Here we extend the elev object to the extent of elev_2 by adding NAs.
 
 ```{r}
+#this is working to make elevation match elevation 2, this is taking original elevation and matching it to the new elevation
+#adding NA's to force elevation to match the extent of elevation 2
 elev_4 <- extend(elev, elev_2)
+
+plot(elev_4)
 ```
 
 the origin function returns the coordinates of the cell corner closes to the coordinates (0,0). We can also manually change the origin.
